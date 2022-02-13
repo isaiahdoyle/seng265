@@ -1,3 +1,12 @@
+/*
+    Contributor: Isaiah Doyle
+    Class: SENG 265
+    Assignment: process_cal
+    Last modified by Isaiah Doyle on Feb. 13, 2022
+    Purpose: Given a formatted .xml calendar file, this file parses, filters,
+             sorts, and prints out the gievn events within a range of two dates.
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13,6 +22,10 @@ const char* MONTHS[13] = {"",
     "November", "December"
 };
 
+/*
+    Typedef: Date
+    Description: represents a date given by year, month, day, and day of the week
+*/
 typedef struct {
     int day;
     int month;
@@ -20,6 +33,10 @@ typedef struct {
     char dweek[10];
 } Date;
 
+/*
+    Typedef: Event
+    Description: represents an event in the format given by .xml calendar data
+*/
 typedef struct {
     char description[80];
     char timezone[12];
