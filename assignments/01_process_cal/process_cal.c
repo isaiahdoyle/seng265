@@ -1,5 +1,5 @@
 /*
-    Contributor: Isaiah Doyle
+    Written by Isaiah Doyle
     Class: SENG 265
     Assignment: process_cal
     Last modified by Isaiah Doyle on Feb. 13, 2022
@@ -51,6 +51,7 @@ void readFile(char*, Event*);
 void filterEvents(Event*, Event*, Date, Date);
 void sortEvents(Event*);
 void printEvents(Event*);
+FILE* createFile(char*);
 int countEvents(Event*);
 int compareDates(Date, Date);
 int compareTimes(char*, char*);
@@ -72,13 +73,9 @@ void printLine(char*);
 int main(int argc, char* argv[])
 {
     // configure arguments
-    char startArg[MAX_LINE_LEN];
+    char startArg[MAX_LINE_LEN], endArg[MAX_LINE_LEN], filename[MAX_LINE_LEN];
     sscanf(argv[1], "--start=%s", startArg);
-
-    char endArg[MAX_LINE_LEN];
     sscanf(argv[2], "--end=%s", endArg);
-
-    char filename[MAX_LINE_LEN];
     sscanf(argv[3], "--file=%s", filename);
 
     Date start = getDate(startArg);
@@ -105,32 +102,27 @@ int main(int argc, char* argv[])
         - eventlist: pointer to list of events to write to
 */
 void readFile(char* filename, Event* eventlist) {
-    FILE* calendar = fopen(filename, "r");
-    if (calendar == NULL) {
-        printf("filename invalid.\n");
-        exit(1);
-    }
+    FILE* calendar = createFile(filename);
+    char buffer[255];
+    int i = 0; // current index
+    fscanf(calendar, "<%s>\n", buffer);
+    fscanf(calendar, "\t<%s>\n", buffer);
 
-    char temp[255];
-    int i = 0;
-    fscanf(calendar, "<%s>\n", temp);
-    fscanf(calendar, "\t<%s>\n", temp);
-
-    while (strcmp(temp, "</calendar>") != 0 && i <= MAX_EVENTS) {
+    while (strcmp(buffer, "</calendar>") != 0 && i <= MAX_EVENTS) {
         fscanf(calendar, "\t\t<description>%[^<]</description>\n", eventlist[i].description);
         fscanf(calendar, "\t\t<timezone>%[^<]</timezone>\n", eventlist[i].timezone);
         fscanf(calendar, "\t\t<location>%[^<]</location>\n", eventlist[i].location);
-        fscanf(calendar, "\t\t<day>%[^<]</day>\n", temp);
-        eventlist[i].date.day = atoi(temp);
-        fscanf(calendar, "\t\t<month>%[^<]</month>\n", temp);
-        eventlist[i].date.month = atoi(temp);
-        fscanf(calendar, "\t\t<year>%[^<]</year>\n", temp);
-        eventlist[i].date.year = atoi(temp);
+        fscanf(calendar, "\t\t<day>%[^<]</day>\n", buffer);
+        eventlist[i].date.day = atoi(buffer);
+        fscanf(calendar, "\t\t<month>%[^<]</month>\n", buffer);
+        eventlist[i].date.month = atoi(buffer);
+        fscanf(calendar, "\t\t<year>%[^<]</year>\n", buffer);
+        eventlist[i].date.year = atoi(buffer);
         fscanf(calendar, "\t\t<dweek>%[^<]</dweek>\n", eventlist[i].date.dweek);
         fscanf(calendar, "\t\t<start>%[^<]</start>\n", eventlist[i].start);
         fscanf(calendar, "\t\t<end>%[^<]</end>\n", eventlist[i].end);
-        fscanf(calendar, "\t</%s>\n", temp);
-        fscanf(calendar, "%s\n", temp);
+        fscanf(calendar, "\t</%s>\n", buffer);
+        fscanf(calendar, "%s\n", buffer);
         i++;
     }
 
@@ -155,12 +147,7 @@ void filterEvents(Event* calendar, Event* eventlist, Date start, Date end) {
     for (int i = 0; i < numEvents; i++) {
         cur = eventlist[i].date;
         if (compareDates(cur, start) >= 0 && compareDates(cur, end) <= 0) {
-            strcpy(calendar[j].description, eventlist[i].description);
-            strcpy(calendar[j].timezone, eventlist[i].timezone);
-            strcpy(calendar[j].location, eventlist[i].location);
-            calendar[j].date = cur;
-            strcpy(calendar[j].start, eventlist[i].start);
-            strcpy(calendar[j].end, eventlist[i].end);
+            calendar[j] = eventlist[i];
             j++;
         }
     }
@@ -232,6 +219,23 @@ void printEvents(Event* calendar) {
             printf("\n");
         }
     }
+}
+
+
+/*
+    Function: createFile
+    Description: opens a file if possible, returns the file pointer
+    Input:
+        - filename: string representing the path to the file to be read
+    Output: pointer to opened file
+*/
+FILE* createFile(char* filename) {
+    FILE* ofp = fopen(filename, "r");
+    if (ofp == NULL) {
+        printf("filename invalid!");
+        exit(1);
+    }
+    return ofp;
 }
 
 /*
