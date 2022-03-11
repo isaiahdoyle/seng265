@@ -18,7 +18,20 @@ The commands above assume you have cloned your repository in the home folder and
 
 ## Installing additional modules for tester.py
 
-To use tester.py inside Senjhalla  or in the analogous environment for M1 MacBoocks, you need to execute the following command
+To use tester.py inside Senjhalla  or in the analogous environment for M1 MacBoocks, you need to execute the following commands
 
-    pip3 install deepdiff --no-warn-script-location
-    
+    pip3 install deepdiff
+    pip3 install pyyaml
+
+pip3 should be part of the installation you completed for A#0, but if this step failed during the process, you can install pip3 as follows:
+
+* In Senjhalla:
+
+        sudo apt update
+        sudo apt install python3-pip
+
+* In M1 Mackbooks: pip3 was automatically installed by homebrew
+
+## Interpreting the diffs produced by tester.py
+
+The easiest way to undersand the differences described by tester.py is to consider the produced output.yaml and the expected .yaml (e.g., test02.yaml) files as dictionaries. Thus, tester.py will tell you when one key in a dictionary is missing in the other one, or when the value associated with a key (e.g., a string or a list) is different from the other side. Also, tester.py checks the syntax of your produced output.yaml file. If the syntax is not valid, the comparisson won't take place.
