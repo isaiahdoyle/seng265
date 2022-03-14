@@ -12,10 +12,11 @@ generation of YAML files.
 from http.client import REQUESTED_RANGE_NOT_SATISFIABLE
 import sys
 import datetime
-import re # regular expressions
+import re
+from types import NoneType  # regular expressions
 
 
-def parse_args(args):
+def parse_args(args: list[str]) -> list[str]:
     """ Parses input arguments according to specified format.
     """
     startarg = args[1].lstrip("--start=")
@@ -44,17 +45,22 @@ def main():
     """
     start, end, events, circuits, broadcasters = parse_args(sys.argv)
 
-    events, circuits, broadcasters = parse_files(events, circuits, broadcasters)
+    events, circuits, broadcasters = parse_files(
+        events, circuits, broadcasters)
     set_date(events)
 
     # events = filter_events(events, start, end)
-    get_date = lambda event: event["date"]
+    def get_date(event): return event["date"]
     events = sorted(filter_events(events, start, end), key=get_date)
 
     write_file(events, circuits, broadcasters)
 
 
-def set_date(events):
+def set_date(events: list[dict]) -> None:
+    """ Replaces 'year', 'month', 'day', and time parameters on each event with a datetime object
+            Input: list of 'event' dictionaries
+            Output: none
+    """
     for event in events:
         year = int(event["year"])
         del event["year"]
@@ -73,12 +79,22 @@ def set_date(events):
         event["end"] = datetime.time(hour, min)
 
 
-def get_time(time):
+def get_time(time: str) -> tuple[int, int]:
+    """ Splits a time string into two ints representing hours, minutes.
+            Input: time string of format "hh:mm"
+            Output: two ints for hour and minute
+    """
     hour, min = time.split(":")
     return int(hour), int(min)
 
 
-def filter_events(events, start, end):
+def filter_events(events: list[dict],
+                  start: datetime.datetime,
+                  end: datetime.datetime) -> list[dict]:
+    """ Filters all 'event' dicts not within start-end from a list.
+            Input: list of 'event' dicts, start datetime object, end datetime object
+            Output: list of 'event' dicts incl. only those within times
+    """
     filtered = []
 
     for event in events:
@@ -89,8 +105,12 @@ def filter_events(events, start, end):
     return filtered
 
 
-def parse_files(event_filename, circuit_filename, broadcaster_filename):
+def parse_files(event_filename: str,
+                circuit_filename: str,
+                broadcaster_filename: str) -> tuple[list[dict], list[dict], list[dict]]:
     """ Entry point to file parsing scheme.
+            Input: filename strings for events, circuits, and broadcasters
+            Output: three lists of dicts representing events, circuits and broadcasters
     """
     events = parse_file(event_filename)
     circuits = parse_file(circuit_filename)
@@ -99,7 +119,11 @@ def parse_files(event_filename, circuit_filename, broadcaster_filename):
     return events, circuits, broadcasters
 
 
-def parse_file(filename):
+def parse_file(filename: str) -> list[dict]:
+    """ Parses a file and populates a list of dicts representing events, circuits, or broadcasters.
+            Input: filename string
+            Output: list of dicts filled with data from file
+    """
     items = []
 
     with open(filename) as file:
@@ -113,7 +137,7 @@ def parse_file(filename):
             tag = re.search("<[a-z]*>", line)
             if tag != None:
                 tag = tag.group()
-            if tag == "<event>" or tag == "<circuit>" or buff == "<broadcasters>" and tag == "<broadcaster>":
+            if tag == "<event>" or tag == "<circuit>" or (buff == "<broadcasters>" and tag == "<broadcaster>"):
                 cur += 1
                 item = {}
                 items.append(item)
@@ -124,52 +148,21 @@ def parse_file(filename):
     return items
 
 
-def parse_circuits(filename):
-    circuits = []
-    with open(filename) as file:
-        cur_circuit = -1
-        lines = file.readlines()
-        for line in lines:
-            line.rstrip()
-            tag = re.search("<([a-z]*)>", line)
-            if tag != None:
-                tag = tag.group(1)
-            if tag == "<circuit>":
-                cur_circuit += 1
-                circuit = {}
-                circuits.append(circuit)
-            elif tag != "<circuits>" and tag != None:
-                data = re.search("\>(.*?)\<", line).group(1)
-                populate_dict(tag, data, circuits[cur_circuit])
-    return circuits
-
-
-def parse_broadcasters(filename):
-    broadcasters = []
-    with open(filename) as file:
-        cur_broadcaster = -1
-        lines = file.readlines()
-        for line in lines:
-            line.rstrip()
-            tag = re.search("<([a-z]*)>", line)
-            if tag != None:
-                tag = tag.group()
-            if tag == "<broadcaster>":
-                cur_broadcaster += 1
-                broadcaster = {}
-                broadcasters.append(broadcaster)
-            elif tag != "<broadcasters>" and tag != None:
-                data = re.search("\>(.*?)\<", line).group(1)
-                populate_dict(tag, data, broadcasters[cur_broadcaster])
-    return broadcasters
-
-
-def populate_dict(tag: str, data: str, dict: dict):
+def populate_dict(tag: str, data: str, dict: dict) -> None:
+    """ Sets a the value of <tag> key to <data> value in dict.
+            Input: key (tag) string, data (value) string, dict to be set
+            Output: none
+    """
     tag = tag.strip("<>")
     dict[tag] = data
 
 
-def write_file(events, circuits, broadcasters):
+def write_file(events: list[dict],
+               circuits: list[dict],
+               broadcasters: list[dict]) -> None:
+    """ Writes all formatted calendar data to output.yaml.
+            Input: lists of dicts representing events, circuits, and broadcasters
+    """
     with open("./output.yaml", "w") as file:
         file.write("events:")
         prev_date = 0
@@ -187,7 +180,8 @@ def write_file(events, circuits, broadcasters):
             file.write(f'      location: {circuit[1]}\n')
             file.write(f'      when: {event["date"].strftime("%I:%M %p")} - ')
             file.write(f'{event["end"].strftime("%I:%M %p")} ')
-            file.write(f'{event["date"].strftime("%A, %B %d, %Y")} ({circuit[2]})\n')
+            file.write(
+                f'{event["date"].strftime("%A, %B %d, %Y")} ({circuit[2]})\n')
             file.write('      broadcasters:')
             for broadcaster in cur_broadcasters:
                 file.write(f'\n        - {broadcaster["name"]}')
@@ -195,13 +189,22 @@ def write_file(events, circuits, broadcasters):
             prev_date = cur_date
 
 
-def get_circuit(circuits, event):
+def get_circuit(circuits: list[dict], event: dict) -> tuple[str, str, str, str]:
+    """ Retrieves circuit name, location, timezone, and direction from event
+            Input: list of 'circuit' dicts, 'event' dict
+            Output: name, location, timezone, direction of corresponding circuit to given event's location
+    """
     id = event["location"]
-    circuit = next((circuit for circuit in circuits if circuit["id"] == id), None)
+    circuit = next(
+        (circuit for circuit in circuits if circuit["id"] == id), None)
     return circuit["name"], circuit["location"], circuit["timezone"], circuit["direction"]
 
 
-def get_broadcasters(broadcasters, event):
+def get_broadcasters(broadcasters: list[dict], event: dict) -> list[dict]:
+    """ Retrieves broadcaster info based off event data
+            Input: list of 'broadcaster' dicts, 'event' dict
+            Output: list of broadcaster dicts corresponding to given event's broadcasters
+    """
     ids = event["broadcaster"].split(",")
     ids = [int(id.lstrip("BR"))-1 for id in ids]
     actual_broadcasters = []
