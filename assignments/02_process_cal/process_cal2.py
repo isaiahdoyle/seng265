@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Feb 01 08:35:33 2022
+Last edited on Mon Mar 14 13:30:17 2022
 @author: rivera
+student: isaiahdoyle (V00958397)
 
 This is a text processor that allows to translate XML-based events to YAML-based events.
 CAREFUL: You ARE NOT allowed using (i.e., import) modules/libraries/packages to parse XML or YAML
@@ -12,11 +14,11 @@ generation of YAML files.
 from http.client import REQUESTED_RANGE_NOT_SATISFIABLE
 import sys
 import datetime
-import re
-from types import NoneType  # regular expressions
+import re  # regular expressions
+from typing import List, Tuple
 
 
-def parse_args(args: list[str]) -> list[str]:
+def parse_args(args: List[str]) -> List[str]:
     """ Parses input arguments according to specified format.
     """
     startarg = args[1].lstrip("--start=")
@@ -40,74 +42,9 @@ def parse_args(args: list[str]) -> list[str]:
     return (start, end, events, circuits, broadcasters)
 
 
-def main():
-    """ The main entry point for the program.
-    """
-    start, end, events, circuits, broadcasters = parse_args(sys.argv)
-
-    events, circuits, broadcasters = parse_files(
-        events, circuits, broadcasters)
-    set_date(events)
-
-    # events = filter_events(events, start, end)
-    def get_date(event): return event["date"]
-    events = sorted(filter_events(events, start, end), key=get_date)
-
-    write_file(events, circuits, broadcasters)
-
-
-def set_date(events: list[dict]) -> None:
-    """ Replaces 'year', 'month', 'day', and time parameters on each event with a datetime object
-            Input: list of 'event' dictionaries
-            Output: none
-    """
-    for event in events:
-        year = int(event["year"])
-        del event["year"]
-        month = int(event["month"])
-        del event["month"]
-        day = int(event["day"])
-        del event["day"]
-        hour, min = get_time(event["start"])
-        del event["start"]
-
-        event["date"] = datetime.datetime(year, month, day, hour, min)
-
-        hour, min = get_time(event["end"])
-        del event["end"]
-
-        event["end"] = datetime.time(hour, min)
-
-
-def get_time(time: str) -> tuple[int, int]:
-    """ Splits a time string into two ints representing hours, minutes.
-            Input: time string of format "hh:mm"
-            Output: two ints for hour and minute
-    """
-    hour, min = time.split(":")
-    return int(hour), int(min)
-
-
-def filter_events(events: list[dict],
-                  start: datetime.datetime,
-                  end: datetime.datetime) -> list[dict]:
-    """ Filters all 'event' dicts not within start-end from a list.
-            Input: list of 'event' dicts, start datetime object, end datetime object
-            Output: list of 'event' dicts incl. only those within times
-    """
-    filtered = []
-
-    for event in events:
-        date = event["date"]
-        if start < date and date < end:
-            filtered.append(event)
-
-    return filtered
-
-
 def parse_files(event_filename: str,
                 circuit_filename: str,
-                broadcaster_filename: str) -> tuple[list[dict], list[dict], list[dict]]:
+                broadcaster_filename: str) -> Tuple[List[dict], List[dict], List[dict]]:
     """ Entry point to file parsing scheme.
             Input: filename strings for events, circuits, and broadcasters
             Output: three lists of dicts representing events, circuits and broadcasters
@@ -119,7 +56,7 @@ def parse_files(event_filename: str,
     return events, circuits, broadcasters
 
 
-def parse_file(filename: str) -> list[dict]:
+def parse_file(filename: str) -> List[dict]:
     """ Parses a file and populates a list of dicts representing events, circuits, or broadcasters.
             Input: filename string
             Output: list of dicts filled with data from file
@@ -156,10 +93,58 @@ def populate_dict(tag: str, data: str, dict: dict) -> None:
     tag = tag.strip("<>")
     dict[tag] = data
 
+def set_date(events: List[dict]) -> None:
+    """ Replaces 'year', 'month', 'day', and time parameters on each event with a datetime object
+            Input: list of 'event' dictionaries
+            Output: none
+    """
+    for event in events:
+        year = int(event["year"])
+        del event["year"]
+        month = int(event["month"])
+        del event["month"]
+        day = int(event["day"])
+        del event["day"]
+        hour, min = get_time(event["start"])
+        del event["start"]
 
-def write_file(events: list[dict],
-               circuits: list[dict],
-               broadcasters: list[dict]) -> None:
+        event["date"] = datetime.datetime(year, month, day, hour, min)
+
+        hour, min = get_time(event["end"])
+        del event["end"]
+
+        event["end"] = datetime.time(hour, min)
+
+
+def get_time(time: str) -> Tuple[int, int]:
+    """ Splits a time string into two ints representing hours, minutes.
+            Input: time string of format "hh:mm"
+            Output: two ints for hour and minute
+    """
+    hour, min = time.split(":")
+    return int(hour), int(min)
+
+
+def filter_events(events: List[dict],
+                  start: datetime.datetime,
+                  end: datetime.datetime) -> List[dict]:
+    """ Filters all 'event' dicts not within start-end from a list.
+            Input: list of 'event' dicts, start datetime object, end datetime object
+            Output: list of 'event' dicts incl. only those within times
+    """
+    filtered = []
+
+    for event in events:
+        date = event["date"]
+        if start < date and date < end:
+            filtered.append(event)
+
+    return filtered
+
+
+def write_file(events: List[dict],
+               circuits: List[dict],
+               broadcasters: List[dict]) -> None:
     """ Writes all formatted calendar data to output.yaml.
             Input: lists of dicts representing events, circuits, and broadcasters
     """
@@ -172,7 +157,7 @@ def write_file(events: list[dict],
 
             if (cur_date != prev_date):
                 file.write(f'\n  - {event["date"].strftime("%d-%m-%Y:")}')
-            circuit = get_circuit(circuits, event)
+            circuit = get_circuits(circuits, event)
             cur_broadcasters = get_broadcasters(broadcasters, event)
             file.write(f'\n    - id: {event["id"]}\n')
             file.write(f'      description: {event["description"]}\n')
@@ -189,7 +174,7 @@ def write_file(events: list[dict],
             prev_date = cur_date
 
 
-def get_circuit(circuits: list[dict], event: dict) -> tuple[str, str, str, str]:
+def get_circuits(circuits: List[dict], event: dict) -> Tuple[str, str, str, str]:
     """ Retrieves circuit name, location, timezone, and direction from event
             Input: list of 'circuit' dicts, 'event' dict
             Output: name, location, timezone, direction of corresponding circuit to given event's location
@@ -200,7 +185,7 @@ def get_circuit(circuits: list[dict], event: dict) -> tuple[str, str, str, str]:
     return circuit["name"], circuit["location"], circuit["timezone"], circuit["direction"]
 
 
-def get_broadcasters(broadcasters: list[dict], event: dict) -> list[dict]:
+def get_broadcasters(broadcasters: List[dict], event: dict) -> List[dict]:
     """ Retrieves broadcaster info based off event data
             Input: list of 'broadcaster' dicts, 'event' dict
             Output: list of broadcaster dicts corresponding to given event's broadcasters
@@ -214,6 +199,22 @@ def get_broadcasters(broadcasters: list[dict], event: dict) -> list[dict]:
         actual_broadcasters.append(broadcaster)
 
     return actual_broadcasters
+
+
+def main():
+    """ The main entry point for the program.
+    """
+    start, end, events, circuits, broadcasters = parse_args(sys.argv)
+
+    events, circuits, broadcasters = parse_files(
+        events, circuits, broadcasters)
+    set_date(events)
+
+    # events = filter_events(events, start, end)
+    def get_date(event): return event["date"]
+    events = sorted(filter_events(events, start, end), key=get_date)
+
+    write_file(events, circuits, broadcasters)
 
 
 if __name__ == '__main__':
